@@ -27,6 +27,7 @@
 // sorted alphabetically.
 #include "fw/asf-strategy.hpp"
 #include "fw/best-route-strategy2.hpp"
+#include "fw/kondn-strategy.hpp"
 #include "fw/multicast-strategy.hpp"
 #include "fw/random-strategy.hpp"
 
@@ -87,6 +88,7 @@ BOOST_AUTO_TEST_SUITE(TestBroadcastMedium)
 using Strategies = boost::mpl::vector<
   AsfStrategy,
   BestRouteStrategy2,
+  KoNDNStrategy,
   MulticastStrategy,
   RandomStrategy
 >;

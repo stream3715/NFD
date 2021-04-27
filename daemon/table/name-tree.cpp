@@ -159,6 +159,13 @@ NameTree::findExactMatch(const Name& name, size_t prefixLen) const
 }
 
 Entry*
+NameTree::findExactIDMatch(const Name& name) const
+{
+  const Node* node = m_ht.findByID(name);
+  return node == nullptr ? nullptr : &node->entry;
+}
+
+Entry*
 NameTree::findLongestPrefixMatch(const Name& name, const EntrySelector& entrySelector) const
 {
   size_t depth = std::min(name.size(), getMaxDepth());

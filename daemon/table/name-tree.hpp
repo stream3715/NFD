@@ -142,6 +142,22 @@ public: // mutation
   eraseIfEmpty(Entry* entry, bool canEraseAncestors = true);
 
 public: // matching
+/** \brief Exact match lookup
+   *  \return entry with \c name.getPrefix(prefixLen), or nullptr if it does not exist
+   */
+  Entry*
+  findExactIDMatch(const Name& name) const;
+
+  /** \brief Longest prefix matching
+   *  \return entry whose name is a prefix of \p name and passes \p entrySelector,
+   *          where no other entry with a longer name satisfies those requirements;
+   *          or nullptr if no entry satisfying those requirements exists
+   */
+  Entry*
+  findLongestIDMatch(const Name& name,
+                         const EntrySelector& entrySelector = AnyEntry()) const;
+
+
   /** \brief Exact match lookup
    *  \return entry with \c name.getPrefix(prefixLen), or nullptr if it does not exist
    */

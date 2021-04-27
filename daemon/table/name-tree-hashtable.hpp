@@ -192,6 +192,18 @@ public:
     return m_buckets[bucket]; // don't use m_bucket.at() for better performance
   }
 
+  /** \brief find node for ID
+   *  \pre name
+   */
+  const Node*
+  findByID(const Name& name) const;
+
+  /** \brief find node for ID.getNearest()
+   *  \pre name
+   */
+  const Node*
+  findNearestByID(const Name& name) const;
+
   /** \brief find node for name.getPrefix(prefixLen)
    *  \pre name.size() > prefixLen
    */

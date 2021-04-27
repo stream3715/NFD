@@ -207,6 +207,13 @@ Hashtable::findOrInsert(const Name& name, size_t prefixLen, HashValue h, bool al
 }
 
 const Node*
+Hashtable::findByID(const Name& name) const
+{
+  HashValue h = computeHash(name, name.size());
+  return const_cast<Hashtable*>(this)->findOrInsert(name, name.size(), h, false).first;
+}
+
+const Node*
 Hashtable::find(const Name& name, size_t prefixLen) const
 {
   HashValue h = computeHash(name, prefixLen);

@@ -88,6 +88,7 @@ BOOST_AUTO_TEST_SUITE(TestStrategyNackReturn)
 
 using Strategies = boost::mpl::vector<
   BestRouteStrategy2,
+  KoNDNStrategy,
   MulticastStrategy,
   RandomStrategy
 >;
