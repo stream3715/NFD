@@ -53,6 +53,7 @@ KoNDNStrategy::KoNDNStrategy(Forwarder &forwarder, const Name &name)
                                     to_string(*parsed.version)));
   }
   this->setInstanceName(makeInstanceName(name, getStrategyName()));
+  this->m_nodeId = forwarder.getNodeId();
 }
 
 const Name &KoNDNStrategy::getStrategyName() {
@@ -63,13 +64,14 @@ const Name &KoNDNStrategy::getStrategyName() {
 void KoNDNStrategy::afterReceiveInterest(
     const FaceEndpoint &ingress, const Interest &interest,
     const shared_ptr<pit::Entry> &pitEntry) {
-  std::string koNndProtocol = interest.getProtocol();
   RetxSuppressionResult suppression =
       m_retxSuppression.decidePerPitEntry(*pitEntry);
   if(suppression == RetxSuppressionResult::SUPPRESS) {
     NFD_LOG_DEBUG(interest << " from=" << ingress << " suppressed");
     return;
   }
+
+  std::string protocol = interest.getProtocol();
 
   const fib::Entry &fibEntry = this->lookupFib(*pitEntry);
   const fib::NextHopList &nexthops = fibEntry.getNextHops();
@@ -84,13 +86,28 @@ void KoNDNStrategy::afterReceiveInterest(
 
     if(it == nexthops.end()) {
       NFD_LOG_DEBUG(interest << " from=" << ingress << " noNextHop");
+      if(protocol == "kademlia") {
+        Interest newInterest;
+        newInterest = Interest(interest.getContentName(),
+                                   ndn::DEFAULT_INTEREST_LIFETIME);
+        newInterest.setAgentNodeID(this->getNodeID());
 
-      lp::NackHeader nackHeader;
-      nackHeader.setReason(lp::NackReason::NO_ROUTE);
-      this->sendNack(pitEntry, ingress, nackHeader);
+        it = std::find_if(nexthops.begin(), nexthops.end(),
+                          [&](const auto &nexthop) {
+                            return isNextHopEligible(ingress.face, newInterest,
+                                                     nexthop, pitEntry);
+                          });
+        auto egress = FaceEndpoint(it->getFace(), 0);
+        this->sendInterest(pitEntry, egress, newInterest);
+        return;
+      } else {
+        lp::NackHeader nackHeader;
+        nackHeader.setReason(lp::NackReason::NO_ROUTE);
+        this->sendNack(pitEntry, ingress, nackHeader);
 
-      this->rejectPendingInterest(pitEntry);
-      return;
+        this->rejectPendingInterest(pitEntry);
+        return;
+      }
     }
 
     auto egress = FaceEndpoint(it->getFace(), 0);
