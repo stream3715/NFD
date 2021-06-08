@@ -27,11 +27,10 @@
 
 #include <clx/sha1.h>
 
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/uuid/uuid_generators.hpp>
 #include <boost/lexical_cast.hpp>
-
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <ndn-cxx/lp/tags.hpp>
 
 #include "algorithm.hpp"
@@ -62,7 +61,8 @@ Forwarder::Forwarder(FaceTable& faceTable)
       m_csFace(face::makeNullFace(FaceUri("contentstore://"))) {
   uuid uuid = random_generator()();
   clx::sha1 hash;
-  m_nodeId = hash.encode(boost::lexical_cast<std::string>(uuid)).to_string();
+  m_nodeId =
+      Name(hash.encode(boost::lexical_cast<std::string>(uuid)).to_string());
   m_faceTable.addReserved(m_csFace, face::FACEID_CONTENT_STORE);
 
   m_faceTable.afterAdd.connect([this](const Face& face) {
