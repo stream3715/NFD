@@ -48,19 +48,22 @@ NFD_LOG_INIT(Nfd);
 
 const std::string INTERNAL_CONFIG("internal://nfd.conf");
 
-Nfd::Nfd(ndn::KeyChain& keyChain)
+Nfd::Nfd(ndn::KeyChain& keyChain, std::string& id)
     : m_keyChain(keyChain),
-      m_netmon(make_shared<ndn::net::NetworkMonitor>(getGlobalIoService())) {
+      m_netmon(make_shared<ndn::net::NetworkMonitor>(getGlobalIoService())),
+      m_id(id) {
   // Disable automatic verification of parameters digest for decoded Interests.
   Interest::setAutoCheckParametersDigest(false);
 }
 
-Nfd::Nfd(const std::string& configFile, ndn::KeyChain& keyChain)
-    : Nfd(keyChain) {
+Nfd::Nfd(const std::string& configFile, ndn::KeyChain& keyChain,
+         std::string& id)
+    : Nfd(keyChain, id) {
   m_configFile = configFile;
 }
 
-Nfd::Nfd(const ConfigSection& config, ndn::KeyChain& keyChain) : Nfd(keyChain) {
+Nfd::Nfd(const ConfigSection& config, ndn::KeyChain& keyChain, std::string& id)
+    : Nfd(keyChain, id) {
   m_configSection = config;
 }
 
@@ -79,7 +82,7 @@ void Nfd::initialize() {
                            face::FACEID_CONTENT_STORE);
 
   m_faceSystem = make_unique<face::FaceSystem>(*m_faceTable, m_netmon);
-  m_forwarder = make_unique<Forwarder>(*m_faceTable);
+  m_forwarder = make_unique<Forwarder>(*m_faceTable, *m_id);
 
   initializeManagement();
 

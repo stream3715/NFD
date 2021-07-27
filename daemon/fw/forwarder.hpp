@@ -50,7 +50,7 @@ class Strategy;
  */
 class Forwarder {
  public:
-  explicit Forwarder(FaceTable& faceTable);
+  explicit Forwarder(FaceTable& faceTable, std::string id);
 
   VIRTUAL_WITH_TESTS
   ~Forwarder();

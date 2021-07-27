@@ -51,48 +51,47 @@ static Name getDefaultStrategyName() {
   return fw::BestRouteStrategy2::getStrategyName();
 }
 
-Forwarder::Forwarder(FaceTable& faceTable)
+Forwarder::Forwarder(FaceTable& faceTable, std::string id) {
     : m_faceTable(faceTable),
       m_unsolicitedDataPolicy(make_unique<fw::DefaultUnsolicitedDataPolicy>()),
       m_fib(m_nameTree),
       m_pit(m_nameTree),
+      m_nodeId(Name(id)),
       m_measurements(m_nameTree),
       m_strategyChoice(*this),
       m_csFace(face::makeNullFace(FaceUri("contentstore://"))) {
-  uuid uuid = random_generator()();
-  clx::sha1 hash;
-  m_nodeId =
-      Name(hash.encode(boost::lexical_cast<std::string>(uuid)).to_string());
-  m_faceTable.addReserved(m_csFace, face::FACEID_CONTENT_STORE);
+      m_faceTable.addReserved(m_csFace, face::FACEID_CONTENT_STORE);
 
-  m_faceTable.afterAdd.connect([this](const Face& face) {
-    face.afterReceiveInterest.connect(
-        [this, &face](const Interest& interest, const EndpointId& endpointId) {
+      m_faceTable.afterAdd.connect([this](const Face& face) {
+        face.afterReceiveInterest.connect([this, &face](
+                                              const Interest& interest,
+                                              const EndpointId& endpointId) {
           this->startProcessInterest(FaceEndpoint(face, endpointId), interest);
         });
-    face.afterReceiveData.connect(
-        [this, &face](const Data& data, const EndpointId& endpointId) {
-          this->startProcessData(FaceEndpoint(face, endpointId), data);
+        face.afterReceiveData.connect(
+            [this, &face](const Data& data, const EndpointId& endpointId) {
+              this->startProcessData(FaceEndpoint(face, endpointId), data);
+            });
+        face.afterReceiveNack.connect(
+            [this, &face](const lp::Nack& nack, const EndpointId& endpointId) {
+              this->startProcessNack(FaceEndpoint(face, endpointId), nack);
+            });
+        face.onDroppedInterest.connect([this, &face](const Interest& interest) {
+          this->onDroppedInterest(FaceEndpoint(face, 0), interest);
         });
-    face.afterReceiveNack.connect(
-        [this, &face](const lp::Nack& nack, const EndpointId& endpointId) {
-          this->startProcessNack(FaceEndpoint(face, endpointId), nack);
-        });
-    face.onDroppedInterest.connect([this, &face](const Interest& interest) {
-      this->onDroppedInterest(FaceEndpoint(face, 0), interest);
-    });
-  });
-
-  m_faceTable.beforeRemove.connect([this](const Face& face) {
-    cleanupOnFaceRemoval(m_nameTree, m_fib, m_pit, face);
-  });
-
-  m_fib.afterNewNextHop.connect(
-      [&](const Name& prefix, const fib::NextHop& nextHop) {
-        this->startProcessNewNextHop(prefix, nextHop);
       });
 
-  m_strategyChoice.setDefaultStrategy(getDefaultStrategyName());
+      m_faceTable.beforeRemove.connect([this](const Face& face) {
+        cleanupOnFaceRemoval(m_nameTree, m_fib, m_pit, face);
+      });
+
+      m_fib.afterNewNextHop.connect(
+          [&](const Name& prefix, const fib::NextHop& nextHop) {
+            this->startProcessNewNextHop(prefix, nextHop);
+          });
+
+      m_strategyChoice.setDefaultStrategy(getDefaultStrategyName());
+    }
 }
 
 Forwarder::~Forwarder() = default;
@@ -217,8 +216,8 @@ void Forwarder::onContentStoreMiss(const FaceEndpoint& ingress,
                                                    << " nexthop-faceid="
                                                    << nextHopFace->getId());
       // go to outgoing Interest pipeline
-      // scope control is unnecessary, because privileged app explicitly wants
-      // to forward
+      // scope control is unnecessary, because privileged app explicitly
+      // wants to forward
       this->onOutgoingInterest(pitEntry, FaceEndpoint(*nextHopFace, 0),
                                interest);
     }
@@ -240,7 +239,8 @@ void Forwarder::onContentStoreHit(const FaceEndpoint& ingress,
   afterCsHit(interest, data);
 
   data.setTag(make_shared<lp::IncomingFaceIdTag>(face::FACEID_CONTENT_STORE));
-  // FIXME Should we lookup PIT for other Interests that also match the data?
+  // FIXME Should we lookup PIT for other Interests that also match the
+  // data?
 
   pitEntry->isSatisfied = true;
   pitEntry->dataFreshnessPeriod = data.getFreshnessPeriod();
@@ -325,7 +325,8 @@ void Forwarder::onIncomingData(const FaceEndpoint& ingress, const Data& data) {
   // CS insert
   m_cs.insert(data);
 
-  // when only one PIT entry is matched, trigger strategy: after receive Data
+  // when only one PIT entry is matched, trigger strategy: after receive
+  // Data
   if(pitMatches.size() == 1) {
     auto& pitEntry = pitMatches.front();
 
@@ -350,8 +351,8 @@ void Forwarder::onIncomingData(const FaceEndpoint& ingress, const Data& data) {
     // delete PIT entry's out-record
     pitEntry->deleteOutRecord(ingress.face);
   }
-  // when more than one PIT entry is matched, trigger strategy: before satisfy
-  // Interest, and send Data to all matched out faces
+  // when more than one PIT entry is matched, trigger strategy: before
+  // satisfy Interest, and send Data to all matched out faces
   else {
     std::set<std::pair<Face*, EndpointId>> pendingDownstreams;
     auto now = time::steady_clock::now();
@@ -563,17 +564,18 @@ void Forwarder::onNewNextHop(const Name& prefix, const fib::NextHop& nextHop) {
         if(nte.getStrategyChoiceEntry() != nullptr) {
           strategy = &nte.getStrategyChoiceEntry()->getStrategy();
         }
-        // current nte has buffered Interests but no fibEntry (except for the
-        // root nte) and the strategy enables new nexthop behavior, we enumerate
-        // the current nte and keep visiting its children.
+        // current nte has buffered Interests but no fibEntry (except for
+        // the root nte) and the strategy enables new nexthop behavior, we
+        // enumerate the current nte and keep visiting its children.
         if(nte.getName().size() == 0 ||
            (strategy != nullptr && strategy->wantNewNextHopTrigger() &&
             fibEntry == nullptr && nte.hasPitEntries())) {
           return {true, true};
         }
         // we don't need the current nte (no pitEntry or strategy doesn't
-        // support new nexthop), but if the current nte has no fibEntry, it's
-        // still possible that its children are affected by the new nexthop.
+        // support new nexthop), but if the current nte has no fibEntry,
+        // it's still possible that its children are affected by the new
+        // nexthop.
         else if(fibEntry == nullptr) {
           return {false, true};
         }

@@ -71,7 +71,7 @@ void KoNDNStrategy::afterReceiveInterest(
     return;
   }
 
-  std::string protocol = interest.getProtocol();
+  Name protocol = interest.getProtocol();
 
   const fib::Entry &fibEntry = this->lookupFib(*pitEntry);
   const fib::NextHopList &nexthops = fibEntry.getNextHops();
@@ -86,7 +86,7 @@ void KoNDNStrategy::afterReceiveInterest(
 
     if(it == nexthops.end()) {
       NFD_LOG_DEBUG(interest << " from=" << ingress << " noNextHop");
-      if(protocol == "kademlia") {
+      if(protocol.toUri() == "kademlia") {
         Interest newInterest;
         newInterest = Interest(interest.getContentName(),
                                    ndn::DEFAULT_INTEREST_LIFETIME);

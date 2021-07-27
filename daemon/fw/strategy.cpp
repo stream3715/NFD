@@ -280,7 +280,7 @@ const fib::Entry& Strategy::lookupFib(const pit::Entry& pitEntry) const {
   const Fib& fib = m_forwarder.getFib();
 
   const Interest& interest = pitEntry.getInterest();
-  const std::string koNndProtocol = interest.getProtocol();
+  const std::string koNndProtocol = interest.getProtocol().toUri();
   // has forwarding hint?
   if(interest.getForwardingHint().empty()) {
     // FIB lookup with Interest name

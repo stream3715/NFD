@@ -61,50 +61,45 @@ public:
   /**
    * \brief Create NFD instance using an absolute or relative path to a configuration file.
    */
-  Nfd(const std::string& configFile, ndn::KeyChain& keyChain);
+ Nfd(const std::string& configFile, ndn::KeyChain& keyChain, std::string id);
 
-  /**
-   * \brief Create NFD instance using a parsed ConfigSection.
-   *
-   * This version of the constructor is more appropriate for integrated environments,
-   * such as NS-3 or Android.
-   *
-   * \note When using this version of the constructor, error messages will show
-   *       "internal://nfd.conf" when referring to configuration errors.
-   */
-  Nfd(const ConfigSection& config, ndn::KeyChain& keyChain);
+ /**
+  * \brief Create NFD instance using a parsed ConfigSection.
+  *
+  * This version of the constructor is more appropriate for integrated
+  * environments, such as NS-3 or Android.
+  *
+  * \note When using this version of the constructor, error messages will show
+  *       "internal://nfd.conf" when referring to configuration errors.
+  */
+ Nfd(const ConfigSection& config, ndn::KeyChain& keyChain, std::string id);
 
-  /**
-   * \brief Destructor.
-   */
-  ~Nfd();
+ /**
+  * \brief Destructor.
+  */
+ ~Nfd();
 
-  /**
-   * \brief Perform initialization of NFD instance.
-   *
-   * After initialization, NFD can be started by invoking `getGlobalIoService().run()`.
-   */
-  void
-  initialize();
+ /**
+  * \brief Perform initialization of NFD instance.
+  *
+  * After initialization, NFD can be started by invoking
+  * `getGlobalIoService().run()`.
+  */
+ void initialize();
 
-  /**
-   * \brief Reload configuration file and apply updates (if any).
-   */
-  void
-  reloadConfigFile();
+ /**
+  * \brief Reload configuration file and apply updates (if any).
+  */
+ void reloadConfigFile();
 
 private:
-  explicit
-  Nfd(ndn::KeyChain& keyChain);
+ explicit Nfd(ndn::KeyChain& keyChain, std::string id);
 
-  void
-  configureLogging();
+ void configureLogging();
 
-  void
-  initializeManagement();
+ void initializeManagement();
 
-  void
-  reloadConfigFileFaceSection();
+ void reloadConfigFileFaceSection();
 
 private:
   std::string m_configFile;
@@ -113,6 +108,7 @@ private:
   unique_ptr<FaceTable> m_faceTable;
   unique_ptr<face::FaceSystem> m_faceSystem;
   unique_ptr<Forwarder> m_forwarder;
+  unique_ptr<std::string> m_id;
 
   ndn::KeyChain& m_keyChain;
   shared_ptr<face::Face> m_internalFace;
